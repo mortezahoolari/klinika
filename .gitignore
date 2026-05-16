@@ -1,0 +1,14 @@
+.venv/
+.env
+__pycache__/
+*.pyc
+*.pyo
+data/klinika.db
+data/gdt_inbox/
+data/ldt_inbox/
+data/briefings/
+data/audio_tmp/
+*.log
+klinika/web/data/
+klinika.egg-info/
+.pytest_cache/

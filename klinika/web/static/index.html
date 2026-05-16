@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klinika</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f0f2f5;
+            height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background: #fff;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .sidebar-header {
+            padding: 20px;
+            background: #1a73e8;
+            color: #fff;
+        }
+        .sidebar-header-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+        }
+        .sidebar-header h2 { font-size: 18px; margin-bottom: 4px; }
+        .sidebar-header p { font-size: 12px; opacity: 0.8; }
+
+        .lang-toggle {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .lang-toggle button {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.4);
+            color: #fff;
+            border-radius: 4px;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+        .lang-toggle button.active {
+            background: rgba(255,255,255,0.35);
+            opacity: 1;
+        }
+        .lang-toggle button:hover { opacity: 1; }
+
+        /* Sidebar tabs */
+        .sidebar-tabs {
+            display: flex;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .sidebar-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 500;
+            color: #5f6368;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            background: none;
+            border-top: none;
+            border-left: none;
+            border-right: none;
+        }
+        .sidebar-tab.active {
+            color: #1a73e8;
+            border-bottom-color: #1a73e8;
+        }
+        .sidebar-tab:hover { background: #f1f3f4; }
+
+        .schedule {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+        .schedule h3 {
+            font-size: 13px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+        .appt {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            border-left: 3px solid #1a73e8;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .appt:hover { background: #e8f0fe; }
+        .appt-time { font-size: 12px; color: #1a73e8; font-weight: 600; }
+        .appt-name { font-size: 14px; font-weight: 500; margin: 2px 0; }
+        .appt-type { font-size: 12px; color: #666; }
+        .no-schedule {
+            color: #999;
+            font-size: 13px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Main area */
+        .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .main-header {
+            padding: 16px 20px;
+            background: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .main-header h1 { font-size: 20px; color: #202124; }
+        .btn-reset {
+            background: none;
+            border: 1px solid #dadce0;
+            border-radius: 6px;
+            padding: 6px 14px;
+            font-size: 13px;
+            color: #5f6368;
+            cursor: pointer;
+        }
+        .btn-reset:hover { background: #f1f3f4; }
+
+        /* Chat view */
+        .view { display: none; flex-direction: column; flex: 1; }
+        .view.active { display: flex; }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .message {
+            max-width: 75%;
+            margin-bottom: 12px;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+        .message.user {
+            background: #1a73e8;
+            color: #fff;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+        .message.assistant {
+            background: #fff;
+            color: #202124;
+            border: 1px solid #e0e0e0;
+            border-bottom-left-radius: 4px;
+        }
+        .message.assistant.streaming { border-color: #1a73e8; }
+        .message.error {
+            background: #fce8e6;
+            color: #c5221f;
+            border: 1px solid #f5c6cb;
+        }
+        /* Markdown in messages */
+        .message.assistant strong { font-weight: 600; }
+        .message.assistant ul, .message.assistant ol { margin: 6px 0 6px 20px; }
+        .message.assistant li { margin-bottom: 3px; }
+        .message.assistant p { margin-bottom: 8px; }
+        .message.assistant p:last-child { margin-bottom: 0; }
+        .message.assistant code { background: #f1f3f4; padding: 1px 4px; border-radius: 3px; font-size: 13px; }
+        .message.assistant table { border-collapse: collapse; margin: 8px 0; width: 100%; }
+        .message.assistant th, .message.assistant td { border: 1px solid #e0e0e0; padding: 6px 10px; font-size: 13px; text-align: left; }
+        .message.assistant th { background: #f8f9fa; font-weight: 600; }
+
+        /* Send to PVS button (GDT bridge write-back) */
+        .btn-send-pvs {
+            margin-top: 8px; padding: 4px 10px; font-size: 12px;
+            background: #e8f0fe; color: #1a73e8; border: 1px solid #aecbfa;
+            border-radius: 6px; cursor: pointer; display: inline-block;
+        }
+        .btn-send-pvs:hover { background: #d2e3fc; }
+        .btn-send-pvs.sent { background: #e6f4ea; color: #137333; border-color: #a8d5b5; cursor: default; }
+
+        /* Thinking indicator */
+        .thinking {
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 14px; max-width: 75%; margin-bottom: 12px;
+            background: #fff; border: 1px solid #1a73e8;
+            border-radius: 12px; border-bottom-left-radius: 4px;
+            font-size: 13px; color: #1a73e8;
+        }
+        .thinking .dots { display: flex; gap: 3px; }
+        .thinking .dot {
+            width: 6px; height: 6px; background: #1a73e8;
+            border-radius: 50%; animation: pulse 1.2s ease-in-out infinite;
+        }
+        .thinking .dot:nth-child(2) { animation-delay: 0.2s; }
+        .thinking .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes pulse {
+            0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+            40% { opacity: 1; transform: scale(1); }
+        }
+
+        /* Input */
+        .input-area {
+            padding: 16px 20px; background: #fff; border-top: 1px solid #e0e0e0;
+            display: flex; gap: 10px;
+        }
+        .input-area input {
+            flex: 1; padding: 10px 14px; border: 1px solid #dadce0;
+            border-radius: 8px; font-size: 14px; outline: none;
+        }
+        .input-area input:focus { border-color: #1a73e8; }
+        .input-area input:disabled { background: #f1f3f4; }
+        .btn-send {
+            background: #1a73e8; color: #fff; border: none;
+            border-radius: 8px; padding: 10px 20px; font-size: 14px; cursor: pointer;
+        }
+        .btn-send:hover { background: #1557b0; }
+        .btn-send:disabled { background: #94b8e8; cursor: not-allowed; }
+        .btn-mic {
+            background: none; border: 1px solid #dadce0; border-radius: 8px;
+            padding: 10px 14px; font-size: 18px; cursor: pointer; color: #5f6368;
+        }
+        .btn-mic:hover { background: #f1f3f4; }
+        .btn-mic.recording { background: #fce8e6; border-color: #c5221f; color: #c5221f; animation: pulse-mic 1s infinite; }
+        .btn-mic:disabled { opacity: 0.5; cursor: not-allowed; }
+        @keyframes pulse-mic {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Briefing view */
+        .briefing-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px 40px;
+            background: #fff;
+            margin: 20px;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+            line-height: 1.7;
+            font-size: 14px;
+        }
+        .briefing-content h1 { font-size: 22px; margin-bottom: 16px; color: #202124; }
+        .briefing-content h2 { font-size: 17px; margin: 20px 0 10px; color: #1a73e8; border-bottom: 1px solid #e8f0fe; padding-bottom: 6px; }
+        .briefing-content h3 { font-size: 15px; margin: 16px 0 6px; color: #202124; }
+        .briefing-content table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+        .briefing-content th, .briefing-content td { border: 1px solid #e0e0e0; padding: 8px 12px; font-size: 13px; text-align: left; }
+        .briefing-content th { background: #f8f9fa; font-weight: 600; }
+        .briefing-content ul, .briefing-content ol { margin: 6px 0 6px 20px; }
+        .briefing-content li { margin-bottom: 4px; }
+        .briefing-content strong { font-weight: 600; }
+        .briefing-content p { margin-bottom: 8px; }
+        .briefing-loading {
+            text-align: center; padding: 40px; color: #999; font-size: 14px;
+        }
+        .briefing-loading .dots { display: inline-flex; gap: 3px; margin-left: 8px; }
+        .briefing-loading .dot {
+            width: 6px; height: 6px; background: #1a73e8;
+            border-radius: 50%; animation: pulse 1.2s ease-in-out infinite;
+        }
+        .briefing-loading .dot:nth-child(2) { animation-delay: 0.2s; }
+        .briefing-loading .dot:nth-child(3) { animation-delay: 0.4s; }
+
+        /* Consultation view */
+        .consult-area {
+            flex: 1; display: flex; flex-direction: column;
+            padding: 20px; gap: 16px; overflow: hidden;
+        }
+        .consult-patient-bar {
+            background: #e8f0fe; border-radius: 8px;
+            padding: 12px 16px; display: flex; align-items: center; gap: 10px;
+        }
+        .consult-patient-label { font-size: 12px; color: #5f6368; text-transform: uppercase; letter-spacing: 0.5px; }
+        .consult-patient-name { font-size: 15px; font-weight: 600; color: #1a73e8; }
+        .consult-patient-empty { font-size: 14px; color: #999; font-style: italic; }
+        .consult-transcript-box {
+            flex: 1; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
+            padding: 16px; overflow-y: auto; font-size: 14px; line-height: 1.8;
+            color: #333; white-space: pre-wrap; min-height: 150px;
+        }
+        .consult-transcript-empty { color: #bbb; font-style: italic; }
+        .consult-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 4px 0; }
+        .btn-consult-record {
+            background: #1a73e8; color: #fff; border: none;
+            border-radius: 8px; padding: 10px 24px; font-size: 14px;
+            font-weight: 500; cursor: pointer; transition: background 0.15s;
+        }
+        .btn-consult-record:hover { background: #1557b0; }
+        .btn-consult-record.recording { background: #c5221f; animation: pulse-mic 1s infinite; }
+        .btn-consult-record:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-consult-soap {
+            background: #34a853; color: #fff; border: none;
+            border-radius: 8px; padding: 10px 24px; font-size: 14px;
+            font-weight: 500; cursor: pointer; display: none;
+        }
+        .btn-consult-soap:hover { background: #2d8f46; }
+        .consult-status { font-size: 13px; color: #999; margin-left: 4px; }
+        .consult-status.active { color: #c5221f; font-weight: 500; }
+        /* Consult button on appointment cards */
+        .appt-actions { margin-top: 6px; }
+        .btn-appt-consult {
+            background: none; border: 1px solid #dadce0; border-radius: 4px;
+            padding: 2px 8px; font-size: 11px; color: #5f6368; cursor: pointer;
+        }
+        .btn-appt-consult:hover { background: #e8f0fe; border-color: #1a73e8; color: #1a73e8; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-header-top">
+                <div>
+                    <h2>Klinika</h2>
+                    <p id="tagline">Praxis-Assistent</p>
+                </div>
+                <div class="lang-toggle">
+                    <button id="lang-de" onclick="setLang('de')">DE</button>
+                    <button id="lang-en" class="active" onclick="setLang('en')">EN</button>
+                </div>
+            </div>
+        </div>
+        <div class="sidebar-tabs">
+            <button class="sidebar-tab active" id="tab-chat" onclick="switchView('chat', event)">Chat</button>
+            <button class="sidebar-tab" id="tab-briefing" onclick="switchView('briefing', event)">Tagesbriefing</button>
+            <button class="sidebar-tab" id="tab-consult" onclick="switchView('consult', event)">Beratung</button>
+        </div>
+        <div class="schedule" id="schedule">
+            <h3 id="schedule-title">Termine heute</h3>
+            <div class="no-schedule" id="no-schedule">Lade Termine...</div>
+            <div id="appt-list"></div>
+        </div>
+    </div>
+
+    <div class="main-area">
+        <!-- Chat view -->
+        <div class="view active" id="view-chat">
+            <div class="main-header">
+                <h1 id="chat-title">Klinika Chat</h1>
+                <button class="btn-reset" id="btn-new-convo" onclick="resetChat()">Neues Gespräch</button>
+            </div>
+            <div class="messages" id="messages">
+                <div class="message assistant" id="welcome-msg">
+                    Willkommen! Ich bin Klinika, Ihr medizinischer KI-Assistent.
+                    Wie kann ich Ihnen helfen?
+                </div>
+            </div>
+            <div class="input-area">
+                <button class="btn-mic" id="btn-mic" onclick="toggleRecording()" title="Mikrofon">&#127908;</button>
+                <input type="text" id="input" placeholder="Nachricht eingeben..."
+                       onkeydown="if(event.key==='Enter')sendMessage()" autofocus>
+                <button class="btn-send" id="btn-send" onclick="sendMessage()">Senden</button>
+            </div>
+        </div>
+
+        <!-- Briefing view -->
+        <div class="view" id="view-briefing">
+            <div class="main-header">
+                <h1 id="briefing-title">Tagesbriefing</h1>
+                <button class="btn-reset" id="btn-briefing-refresh" onclick="loadBriefing()">Aktualisieren</button>
+            </div>
+            <div class="briefing-content" id="briefing-content">
+                <div class="briefing-loading" id="briefing-loading-initial">
+                    Briefing wird geladen
+                    <span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Consultation view -->
+        <div class="view" id="view-consult">
+            <div class="main-header">
+                <h1 id="consult-title">Konsultation</h1>
+            </div>
+            <div class="consult-area">
+                <div class="consult-patient-bar">
+                    <span class="consult-patient-label">Patient</span>
+                    <span id="consult-patient-name" class="consult-patient-empty">Keinen Patienten ausgewählt — klicken Sie auf 🎙 bei einem Termin.</span>
+                </div>
+                <div class="consult-transcript-box" id="consult-transcript">
+                    <span class="consult-transcript-empty" id="consult-transcript-placeholder">Transcript will appear here as you speak.</span>
+                </div>
+                <div class="consult-controls">
+                    <button class="btn-consult-record" id="btn-consult-record" onclick="toggleConsultRecording()">Aufnahme starten</button>
+                    <button class="btn-consult-soap" id="btn-consult-soap" onclick="generateSOAP()">SOAP-Notiz erstellen</button>
+                    <span class="consult-status" id="consult-status"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- i18n ---
+        const STRINGS = {
+            de: {
+                tagline: "Praxis-Assistent",
+                tabChat: "Chat",
+                tabBriefing: "Tagesbriefing",
+                scheduleTitle: "Termine heute",
+                scheduleLoading: "Lade Termine...",
+                scheduleEmpty: "Keine Termine für heute.",
+                scheduleError: "Termine konnten nicht geladen werden.",
+                chatTitle: "Klinika Chat",
+                newConversation: "Neues Gespräch",
+                inputPlaceholder: "Nachricht eingeben...",
+                micTitle: "Mikrofon",
+                sendButton: "Senden",
+                welcome: "Willkommen! Ich bin Klinika, Ihr medizinischer KI-Assistent. Wie kann ich Ihnen helfen?",
+                briefingTitle: "Tagesbriefing",
+                briefingRefresh: "Aktualisieren",
+                briefingPhases: [
+                    "Tagesplan wird geladen",
+                    "Patientenakten werden geprüft",
+                    "Laborbefunde werden ausgewertet",
+                    "Auffällige Werte werden markiert",
+                    "KI-Prioritätsanalyse läuft",
+                    "Briefing wird zusammengestellt",
+                ],
+                briefingEmpty: "Kein Briefing verfügbar. Bitte importieren Sie zuerst Patientendaten und Kalender.",
+                briefingError: "Fehler beim Laden des Briefings: ",
+                thinking: "Klinika denkt nach...",
+                resetMessage: "Gespräch zurückgesetzt. Wie kann ich Ihnen helfen?",
+                micError: "Mikrofon-Zugriff verweigert: ",
+                noResponse: "Keine Antwort erhalten.",
+                errorPrefix: "Fehler: ",
+                appointmentFallback: "Termin",
+                askAbout: (name) => `Zeig mir die Informationen zu ${name}`,
+                tabConsult: "Beratung",
+                consultTitle: "Konsultation",
+                consultNoPatient: "Keinen Patienten ausgewählt — klicken Sie auf 🎙 bei einem Termin.",
+                consultStart: "Aufnahme starten",
+                consultStop: "Aufnahme stoppen",
+                consultGenerateSOAP: "SOAP-Notiz erstellen",
+                consultRecording: "Aufnahme läuft",
+                consultTranscriptLabel: "Transkript",
+                consultEmpty: "Transkript erscheint hier während der Aufnahme.",
+                consultBtn: "🎙 Beratung",
+                consultSOAPPrompt: (name, t) => `Konsultationsprotokoll für ${name}:\n\n${t}\n\nSchreibe eine SOAP-Notiz direkt als Text-Antwort. Nutze ausschließlich die Informationen aus dem obigen Transkript. Kein Tool-Aufruf nötig.`,
+            },
+            en: {
+                tagline: "Practice Assistant",
+                tabChat: "Chat",
+                tabBriefing: "Daily Briefing",
+                scheduleTitle: "Today's Appointments",
+                scheduleLoading: "Loading appointments...",
+                scheduleEmpty: "No appointments today.",
+                scheduleError: "Could not load appointments.",
+                chatTitle: "Klinika Chat",
+                newConversation: "New Conversation",
+                inputPlaceholder: "Type a message...",
+                micTitle: "Microphone",
+                sendButton: "Send",
+                welcome: "Welcome! I'm Klinika, your medical AI assistant. How can I help you?",
+                briefingTitle: "Daily Briefing",
+                briefingRefresh: "Refresh",
+                briefingPhases: [
+                    "Reading today's schedule",
+                    "Checking patient records",
+                    "Analysing lab results",
+                    "Flagging abnormal values",
+                    "Running AI priority analysis",
+                    "Assembling briefing",
+                ],
+                briefingEmpty: "No briefing available. Please import patient data and calendar first.",
+                briefingError: "Error loading briefing: ",
+                thinking: "Klinika is thinking...",
+                resetMessage: "Conversation reset. How can I help you?",
+                micError: "Microphone access denied: ",
+                noResponse: "No response received.",
+                errorPrefix: "Error: ",
+                appointmentFallback: "Appointment",
+                askAbout: (name) => `Show me information about ${name}`,
+                tabConsult: "Consult",
+                consultTitle: "Consultation",
+                consultNoPatient: "No patient selected — click 🎙 on an appointment to begin.",
+                consultStart: "Start Recording",
+                consultStop: "Stop Recording",
+                consultGenerateSOAP: "Generate SOAP Note",
+                consultRecording: "Recording",
+                consultTranscriptLabel: "Transcript",
+                consultEmpty: "Transcript will appear here as you speak.",
+                consultBtn: "🎙 Consult",
+                consultSOAPPrompt: (name, t) => `Consultation transcript — patient: ${name}\n\n${t}\n\nWrite a SOAP note as plain text in your reply. Use only the information from the transcript above. No tool calls needed.`,
+            }
+        };
+
+        const TOOL_LABELS = {
+            en: {
+                get_patient: "Fetching patient record…",
+                search_patients: "Searching patients…",
+                add_observation: "Adding observation…",
+                query_device_results: "Fetching device data…",
+                todays_schedule: "Loading today's schedule…",
+                save_skill: "Saving skill…",
+                list_skills: "Loading skills…",
+                use_skill: "Running skill…",
+                delete_skill: "Deleting skill…",
+                bootstrap: "Importing patient records…",
+                read_incremental: "Syncing patient updates…",
+                sync_doctolib: "Syncing calendar…",
+                import_lab_results: "Importing lab results…",
+                import_device_result: "Importing device data…",
+                get_current_time: "Checking time…",
+                get_current_date: "Checking date…",
+                remember: "Saving to memory…",
+                recall: "Searching memory…",
+                analyze_labs: "Flagging abnormal values…",
+                generate_priorities: "AI priority analysis…",
+            },
+            de: {
+                get_patient: "Patientenakte wird geladen…",
+                search_patients: "Patienten werden gesucht…",
+                add_observation: "Beobachtung wird hinzugefügt…",
+                query_device_results: "Gerätedaten werden abgerufen…",
+                todays_schedule: "Tagesplan wird geladen…",
+                save_skill: "Skill wird gespeichert…",
+                list_skills: "Skills werden geladen…",
+                use_skill: "Skill wird ausgeführt…",
+                delete_skill: "Skill wird gelöscht…",
+                bootstrap: "Patientendaten werden importiert…",
+                read_incremental: "Updates werden synchronisiert…",
+                sync_doctolib: "Kalender wird synchronisiert…",
+                import_lab_results: "Laborbefunde werden importiert…",
+                import_device_result: "Gerätedaten werden importiert…",
+                get_current_time: "Uhrzeit wird abgerufen…",
+                get_current_date: "Datum wird abgerufen…",
+                remember: "Wird gespeichert…",
+                recall: "Gedächtnis wird durchsucht…",
+                analyze_labs: "Auffällige Werte werden markiert…",
+                generate_priorities: "KI-Prioritätsanalyse…",
+            }
+        };
+
+        let currentLang = localStorage.getItem('klinika_lang') || 'en';
+
+        function setLang(lang) {
+            currentLang = lang;
+            localStorage.setItem('klinika_lang', lang);
+            document.getElementById('lang-de').classList.toggle('active', lang === 'de');
+            document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+            applyStrings();
+            // Reset the agent conversation with the new language system prompt
+            fetch('/reset', { method: 'POST', headers: { 'Accept-Language': lang } });
+            briefingLoaded = false;
+            // If the briefing view is currently active, reload it in the new language
+            if (document.getElementById('view-briefing').classList.contains('active')) {
+                loadBriefing();
+            }
+        }
+
+        function applyStrings() {
+            const s = STRINGS[currentLang];
+            document.getElementById('tagline').textContent = s.tagline;
+            document.getElementById('tab-chat').textContent = s.tabChat;
+            document.getElementById('tab-briefing').textContent = s.tabBriefing;
+            document.getElementById('schedule-title').textContent = s.scheduleTitle;
+            document.getElementById('no-schedule').textContent = s.scheduleLoading;
+            document.getElementById('welcome-msg').textContent = s.welcome;
+            document.getElementById('chat-title').textContent = s.chatTitle;
+            document.getElementById('btn-new-convo').textContent = s.newConversation;
+            document.getElementById('input').placeholder = s.inputPlaceholder;
+            document.getElementById('btn-mic').title = s.micTitle;
+            document.getElementById('btn-send').textContent = s.sendButton;
+            document.getElementById('briefing-title').textContent = s.briefingTitle;
+            document.getElementById('btn-briefing-refresh').textContent = s.briefingRefresh;
+            document.getElementById('tab-consult').textContent = s.tabConsult;
+            document.getElementById('consult-title').textContent = s.consultTitle;
+            document.getElementById('btn-consult-soap').textContent = s.consultGenerateSOAP;
+            const placeholderEl = document.getElementById('consult-transcript-placeholder');
+            if (placeholderEl) placeholderEl.textContent = s.consultEmpty;
+            const recBtn = document.getElementById('btn-consult-record');
+            if (!consultMediaRecorder || consultMediaRecorder.state !== 'recording') {
+                recBtn.textContent = s.consultStart;
+            } else {
+                recBtn.textContent = s.consultStop;
+            }
+            updateConsultPatientBar();
+            document.documentElement.lang = currentLang;
+        }
+
+        // --- State ---
+        const messagesEl = document.getElementById('messages');
+        const inputEl = document.getElementById('input');
+        const btnSend = document.getElementById('btn-send');
+        let isStreaming = false;
+        let briefingLoaded = false;
+
+        marked.setOptions({ breaks: true, gfm: true });
+
+        // --- View switching ---
+        function switchView(view, evt) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('view-' + view).classList.add('active');
+            if (evt && evt.target) evt.target.classList.add('active');
+
+            if (view === 'briefing' && !briefingLoaded) {
+                loadBriefing();
+            }
+            if (view === 'chat') {
+                inputEl.focus();
+            }
+            if (view === 'consult') {
+                updateConsultPatientBar();
+            }
+        }
+
+        // --- Briefing ---
+        async function loadBriefing() {
+            const s = STRINGS[currentLang];
+            const el = document.getElementById('briefing-content');
+            briefingLoaded = false;
+
+            // Cycle through loading phases while waiting for the server
+            let phaseIndex = 0;
+            const phases = s.briefingPhases;
+            const showPhase = () => {
+                el.innerHTML = `<div class="briefing-loading">${phases[phaseIndex % phases.length]}<span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></div>`;
+                phaseIndex++;
+            };
+            showPhase();
+            const cycleTimer = setInterval(showPhase, 4000);
+
+            try {
+                const res = await fetch('/briefing', {
+                    headers: { 'Accept-Language': currentLang }
+                });
+                clearInterval(cycleTimer);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (data.markdown) {
+                    briefingLoaded = true;
+                    el.innerHTML = marked.parse(data.markdown);
+                } else {
+                    el.innerHTML = `<p>${s.briefingEmpty}</p>`;
+                }
+            } catch (e) {
+                clearInterval(cycleTimer);
+                el.innerHTML = `<p>${s.briefingError}${e.message}</p>`;
+            }
+        }
+
+        // --- Consultation ---
+        let consultPatient = null;
+        let consultMediaRecorder = null;
+        let consultTranscript = '';
+        let consultTimer = null;
+        let consultSeconds = 0;
+
+        // Apply on load — all let vars declared above, safe to call now
+        document.getElementById('lang-de').classList.toggle('active', currentLang === 'de');
+        document.getElementById('lang-en').classList.toggle('active', currentLang === 'en');
+        applyStrings();
+
+        function updateConsultPatientBar() {
+            const s = STRINGS[currentLang];
+            const el = document.getElementById('consult-patient-name');
+            if (consultPatient) {
+                el.textContent = consultPatient.name;
+                el.className = 'consult-patient-name';
+            } else {
+                el.textContent = s.consultNoPatient;
+                el.className = 'consult-patient-empty';
+            }
+        }
+
+        function startConsultation(name, patientId) {
+            consultPatient = { name, patientId };
+            consultTranscript = '';
+            document.getElementById('consult-transcript').innerHTML =
+                `<span class="consult-transcript-empty">${STRINGS[currentLang].consultEmpty}</span>`;
+            document.getElementById('btn-consult-soap').style.display = 'none';
+            document.getElementById('consult-status').textContent = '';
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('view-consult').classList.add('active');
+            document.getElementById('tab-consult').classList.add('active');
+            updateConsultPatientBar();
+        }
+
+        function toggleConsultRecording() {
+            if (!consultPatient) return;
+            if (consultMediaRecorder && consultMediaRecorder.state === 'recording') {
+                consultMediaRecorder.stop();
+                return;
+            }
+            const s = STRINGS[currentLang];
+            const btnRecord = document.getElementById('btn-consult-record');
+            const statusEl = document.getElementById('consult-status');
+            consultTranscript = '';
+            consultSeconds = 0;
+            document.getElementById('consult-transcript').innerHTML =
+                `<span class="consult-transcript-empty">${s.consultEmpty}</span>`;
+            document.getElementById('btn-consult-soap').style.display = 'none';
+
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    const audioChunks = [];
+                    consultMediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+
+                    consultMediaRecorder.ondataavailable = (e) => {
+                        if (e.data.size > 0) audioChunks.push(e.data);
+                    };
+
+                    consultMediaRecorder.onstop = async () => {
+                        stream.getTracks().forEach(t => t.stop());
+                        btnRecord.classList.remove('recording');
+                        btnRecord.textContent = STRINGS[currentLang].consultStart;
+                        clearInterval(consultTimer);
+                        statusEl.className = 'consult-status';
+                        statusEl.textContent = '';
+
+                        if (audioChunks.length === 0) return;
+                        const transcriptEl = document.getElementById('consult-transcript');
+                        transcriptEl.innerHTML = `<span class="consult-transcript-empty">[transcribing…]</span>`;
+                        try {
+                            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                            const res = await fetch('/transcribe', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'audio/webm' },
+                                body: blob,
+                            });
+                            if (!res.ok) {
+                                const errText = await res.text();
+                                transcriptEl.textContent = `[Error ${res.status}: ${errText.slice(0, 200)}]`;
+                                return;
+                            }
+                            const data = await res.json();
+                            if (data.text && data.text.trim()) {
+                                consultTranscript = data.text.trim();
+                                transcriptEl.textContent = consultTranscript;
+                                document.getElementById('btn-consult-soap').style.display = 'block';
+                            } else {
+                                transcriptEl.innerHTML = `<span class="consult-transcript-empty">${STRINGS[currentLang].consultEmpty}</span>`;
+                            }
+                        } catch (err) {
+                            transcriptEl.textContent = `[Network error: ${err.message}]`;
+                        }
+                    };
+
+                    consultMediaRecorder.start();
+                    btnRecord.classList.add('recording');
+                    btnRecord.textContent = s.consultStop;
+                    statusEl.className = 'consult-status active';
+
+                    consultTimer = setInterval(() => {
+                        consultSeconds++;
+                        const m = String(Math.floor(consultSeconds / 60)).padStart(2, '0');
+                        const sec = String(consultSeconds % 60).padStart(2, '0');
+                        document.getElementById('consult-status').textContent =
+                            `${STRINGS[currentLang].consultRecording} ${m}:${sec}`;
+                    }, 1000);
+                })
+                .catch(e => addMessage(STRINGS[currentLang].micError + e.message, 'error'));
+        }
+
+        async function generateSOAP() {
+            if (!consultTranscript.trim() || !consultPatient) return;
+            const s = STRINGS[currentLang];
+            const name = consultPatient.name;
+            // Full prompt sent to agent (not shown in UI)
+            const agentPrompt = s.consultSOAPPrompt(name, consultTranscript);
+            // Short label shown in chat bubble
+            const displayLabel = currentLang === 'en'
+                ? `Generate SOAP note — ${name}`
+                : `SOAP-Notiz erstellen — ${name}`;
+
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('view-chat').classList.add('active');
+            document.getElementById('tab-chat').classList.add('active');
+
+            // Display short label, stream agent response with full prompt
+            addMessage(displayLabel, 'user');
+            await streamAgentMessage(agentPrompt);
+        }
+
+        // --- Schedule ---
+        async function loadSchedule() {
+            const s = STRINGS[currentLang];
+            try {
+                const res = await fetch('/schedule');
+                const data = await res.json();
+                const list = document.getElementById('appt-list');
+                const noSchedule = document.getElementById('no-schedule');
+
+                if (data.appointments && data.appointments.length > 0) {
+                    noSchedule.style.display = 'none';
+                    list.innerHTML = data.appointments.map(a => {
+                        const time = a.start_time.length > 11
+                            ? a.start_time.substring(11, 16) : a.start_time;
+                        const visitType = a.visit_type || s.appointmentFallback;
+                        const pid = a.patient_id || '';
+                        return `<div class="appt" data-name="${a.patient_name}" data-pid="${pid}" onclick="apptClick(this)">
+                            <div class="appt-time">${time}</div>
+                            <div class="appt-name">${a.patient_name}</div>
+                            <div class="appt-type">${visitType}${a.notes ? ' — ' + a.notes : ''}</div>
+                            <div class="appt-actions"><button class="btn-appt-consult" onclick="event.stopPropagation(); startConsultation(this.closest('.appt').dataset.name, this.closest('.appt').dataset.pid)">${s.consultBtn}</button></div>
+                        </div>`;
+                    }).join('');
+                } else {
+                    noSchedule.textContent = s.scheduleEmpty;
+                }
+            } catch (e) {
+                document.getElementById('no-schedule').textContent = STRINGS[currentLang].scheduleError;
+            }
+        }
+
+        function apptClick(el) {
+            askAbout(el.dataset.name);
+        }
+
+        function askAbout(name) {
+            if (name === 'Neupatient' || isStreaming) return;
+            const s = STRINGS[currentLang];
+            // Activate chat tab
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('view-chat').classList.add('active');
+            document.getElementById('tab-chat').classList.add('active');
+            inputEl.value = s.askAbout(name);
+            sendMessage();
+        }
+
+        // --- Chat ---
+        function addMessage(text, role) {
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            if (role === 'assistant') {
+                div.innerHTML = marked.parse(text);
+            } else {
+                div.textContent = text;
+            }
+            messagesEl.appendChild(div);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+            return div;
+        }
+
+        function showThinking() {
+            const s = STRINGS[currentLang];
+            const div = document.createElement('div');
+            div.className = 'thinking';
+            div.id = 'thinking-indicator';
+            div.innerHTML = `<div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>${s.thinking}</span>`;
+            messagesEl.appendChild(div);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function removeThinking() {
+            const el = document.getElementById('thinking-indicator');
+            if (el) el.remove();
+        }
+
+        function updateThinkingText(text) {
+            const span = document.querySelector('#thinking-indicator span');
+            if (span) span.textContent = text;
+        }
+
+        async function sendMessage() {
+            const text = inputEl.value.trim();
+            if (!text || isStreaming) return;
+            addMessage(text, 'user');
+            inputEl.value = '';
+            await streamAgentMessage(text);
+        }
+
+        async function streamAgentMessage(text) {
+            if (!text || isStreaming) return;
+            const s = STRINGS[currentLang];
+            isStreaming = true;
+            btnSend.disabled = true;
+            inputEl.disabled = true;
+            showThinking();
+            let fullText = '';
+
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept-Language': currentLang
+                    },
+                    body: JSON.stringify({ message: text }),
+                });
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let currentEvent = 'text';
+                let assistantDiv = null;
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    for (const line of lines) {
+                        if (line.startsWith('event:')) {
+                            currentEvent = line.slice(6).trim();
+                        } else if (line.startsWith('data:')) {
+                            try {
+                                const data = JSON.parse(line.slice(5).trim());
+                                if (currentEvent === 'tool') {
+                                    if (data.status === 'calling') {
+                                        const label = (TOOL_LABELS[currentLang] || TOOL_LABELS.en)[data.name] || data.name + '…';
+                                        updateThinkingText(label);
+                                    }
+                                } else if (currentEvent === 'text' && data.content) {
+                                    if (!assistantDiv) {
+                                        removeThinking();
+                                        assistantDiv = document.createElement('div');
+                                        assistantDiv.className = 'message assistant streaming';
+                                        messagesEl.appendChild(assistantDiv);
+                                    }
+                                    fullText += data.content;
+                                    assistantDiv.innerHTML = marked.parse(fullText);
+                                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                                }
+                            } catch (e) {}
+                            currentEvent = 'text';
+                        }
+                    }
+                }
+                if (!assistantDiv) { removeThinking(); addMessage(s.noResponse, 'error'); }
+                else {
+                    assistantDiv.classList.remove('streaming');
+                    // Add "Send to PVS" button for GDT bridge write-back
+                    const pvsBtnText = currentLang === 'de' ? 'In PVS übertragen' : 'Send to PVS';
+                    const pvsBtn = document.createElement('button');
+                    pvsBtn.className = 'btn-send-pvs';
+                    pvsBtn.textContent = pvsBtnText;
+                    const capturedText = fullText;
+                    pvsBtn.onclick = () => sendToPVS(capturedText, pvsBtn);
+                    assistantDiv.appendChild(document.createElement('br'));
+                    assistantDiv.appendChild(pvsBtn);
+                }
+                loadSchedule();
+            } catch (e) {
+                removeThinking();
+                addMessage(s.errorPrefix + e.message, 'error');
+            }
+            isStreaming = false;
+            btnSend.disabled = false;
+            inputEl.disabled = false;
+            inputEl.focus();
+        }
+
+        async function sendToPVS(content, btn) {
+            try {
+                const res = await fetch('/bridges/gdt/result', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    btn.textContent = currentLang === 'de' ? 'In PVS übertragen ✓' : 'Sent to PVS ✓';
+                    btn.className = 'btn-send-pvs sent';
+                } else {
+                    btn.textContent = data.error || 'Error';
+                }
+            } catch (e) {
+                btn.textContent = 'Error: ' + e.message;
+            }
+        }
+
+        async function resetChat() {
+            const s = STRINGS[currentLang];
+            try {
+                await fetch('/reset', {
+                    method: 'POST',
+                    headers: { 'Accept-Language': currentLang }
+                });
+                messagesEl.innerHTML = `<div class="message assistant">${s.resetMessage}</div>`;
+            } catch (e) { addMessage(s.errorPrefix + e.message, 'error'); }
+        }
+
+        // --- Voice recording ---
+        let mediaRecorder = null;
+        let audioChunks = [];
+        const btnMic = document.getElementById('btn-mic');
+
+        function toggleRecording() {
+            if (isStreaming) return;
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                return;
+            }
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+                    audioChunks = [];
+                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                    mediaRecorder.onstop = () => {
+                        stream.getTracks().forEach(t => t.stop());
+                        btnMic.classList.remove('recording');
+                        btnMic.disabled = true;
+                        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                        sendVoice(blob);
+                    };
+                    mediaRecorder.start();
+                    btnMic.classList.add('recording');
+                })
+                .catch(e => {
+                    addMessage(STRINGS[currentLang].micError + e.message, 'error');
+                });
+        }
+
+        async function sendVoice(blob) {
+            const s = STRINGS[currentLang];
+            isStreaming = true;
+            btnSend.disabled = true;
+            inputEl.disabled = true;
+            showThinking();
+            let fullText = '';
+
+            try {
+                const res = await fetch('/chat/voice', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': blob.type,
+                        'Accept-Language': currentLang
+                    },
+                    body: blob,
+                });
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let currentEvent = 'text';
+                let assistantDiv = null;
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    for (const line of lines) {
+                        if (line.startsWith('event:')) {
+                            currentEvent = line.slice(6).trim();
+                        } else if (line.startsWith('data:')) {
+                            try {
+                                const data = JSON.parse(line.slice(5).trim());
+                                if (currentEvent === 'transcription' && data.content) {
+                                    removeThinking();
+                                    addMessage(data.content, 'user');
+                                    showThinking();
+                                } else if (currentEvent === 'tool') {
+                                    if (data.status === 'calling') {
+                                        const label = (TOOL_LABELS[currentLang] || TOOL_LABELS.en)[data.name] || data.name + '…';
+                                        updateThinkingText(label);
+                                    }
+                                } else if (currentEvent === 'text' && data.content) {
+                                    if (!assistantDiv) {
+                                        removeThinking();
+                                        assistantDiv = document.createElement('div');
+                                        assistantDiv.className = 'message assistant streaming';
+                                        messagesEl.appendChild(assistantDiv);
+                                    }
+                                    fullText += data.content;
+                                    assistantDiv.innerHTML = marked.parse(fullText);
+                                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                                }
+                            } catch (e) {}
+                            currentEvent = 'text';
+                        }
+                    }
+                }
+                if (!assistantDiv) { removeThinking(); }
+                else { assistantDiv.classList.remove('streaming'); }
+                loadSchedule();
+            } catch (e) {
+                removeThinking();
+                addMessage(s.errorPrefix + e.message, 'error');
+            }
+            isStreaming = false;
+            btnSend.disabled = false;
+            btnMic.disabled = false;
+            inputEl.disabled = false;
+            inputEl.focus();
+        }
+
+        // Set welcome message in correct language
+        document.getElementById('welcome-msg').textContent = STRINGS[currentLang].welcome;
+
+        loadSchedule();
+    </script>
+</body>
+</html>
