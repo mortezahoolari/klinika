@@ -53,7 +53,7 @@ ollama pull gemma4:26b        # or gemma4:e4b for faster/lighter
 ollama pull nomic-embed-text
 
 # 2. Clone and install
-git clone https://github.com/<user>/klinika.git
+git clone https://github.com/mortezahoolari/klinika.git
 cd klinika
 pip install uv
 uv sync
