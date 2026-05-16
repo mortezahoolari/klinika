@@ -2,7 +2,7 @@
 
 **A local-first AI thinking layer for German physicians.**
 
-Klinika runs Gemma 4 on-premise — no cloud, no SaaS, no patient data leaving the building. It sits beside whatever practice management software (PVS) the clinic already uses, reads the same file formats (BDT, LDT, GDT) every German PVS exports, and gives the doctor a thinking partner they can actually trust.
+Klinika runs Gemma 4 on-premise — no cloud, no SaaS, no patient data leaving the building. It connects to the clinic's existing practice software via BDT/LDT/GDT (the open KBV standards every German PVS exports), and to specialist AI vendors via MCP plugins — turning the doctor's workstation into an intelligence hub where every system talks through one interface.
 
 > Built for the [Gemma 4 Good Hackathon](https://www.kaggle.com/competitions/gemma-4-good-hackathon) · Health & Sciences track
 
