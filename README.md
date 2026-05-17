@@ -48,8 +48,7 @@ Cloud-based AI assistants are a non-starter: German healthcare law requires pati
 
 ```bash
 # 1. Install Ollama and pull models
-ollama pull gemma4:26b        # or gemma4:e4b for faster/lighter
-ollama pull nomic-embed-text
+ollama pull gemma4:26b        # or gemma4:e2b for faster/lighter
 
 # 2. Clone and install
 git clone https://github.com/mortezahoolari/klinika.git
@@ -67,7 +66,7 @@ uv run python -m klinika.web
 start http://localhost:9000
 ```
 
-The **Tagesbriefing** tab shows the AI-generated morning briefing. The **Chat** tab gives free-form access to the full tool set.
+The **Daily Briefing** tab shows the AI-generated morning briefing. The **Chat** tab gives free-form access to the full tool set.
 
 ---
 
@@ -83,28 +82,29 @@ Web UI (FastAPI + SSE, :9000)
 Agent loop (Ollama function-calling)
   │ calls tools
   ▼
-6 core tools (action-oriented, name-based)
+5 clinical tools
   ├── get_patient(name)              → full profile: demographics, diagnoses,
   │                                    medications, allergies, encounters, labs
   ├── search_patients(...)           → cross-patient query + abnormal lab flagging
   ├── add_observation(name, note)    → save clinical note
   ├── query_device_results(name)     → ECG, spirometry, BP (GDT)
-  ├── todays_schedule()              → today's appointments
-  └── find_plugin(capability)        → discover installed MCP vendor plugins
-  + MCP plugins (vendor subprocesses, stdio transport — e.g. ecg_server.py)
-  + admin tools: import_lab_results, import_device_result, bootstrap, skills, memory
+  └── todays_schedule()              → today's appointments
+  + find_plugin(capability)          → discovers MCP vendor plugins; injects their
+  │                                    tool schemas into the agent on demand
+  + injected plugin tools (e.g. analyze_ecg) — available after find_plugin fires
+  + admin tools: import_lab_results, import_device_result, memory
   │ reads/writes
   ▼
 SQLite (data/klinika.db)  ←  BDT/LDT/GDT parsers
   │                            (KBV-compliant)
   ▼
-Gemma 4 via Ollama        ←  nomic-embed-text (embeddings)
+Gemma 4 via Ollama
   (local, no network)
 ```
 
 **Data flow on installation day:**
 1. Clinic admin exports full BDT from existing PVS (MEDISTAR, TURBOMED, medatixx, etc.)
-2. `bootstrap` tool ingests all patient records, diagnoses, medications, encounters
+2. Klinika ingests the BDT file — patient records, diagnoses, medications, encounters
 3. Daily: calendar sync from Doctolib (or PVS export) + LDT lab inbox + GDT device folder
 4. Drafts go back to the doctor for copy-paste into the PVS; device results can be written back automatically via GDT SA 6310
 
@@ -116,8 +116,7 @@ Gemma 4 via Ollama        ←  nomic-embed-text (embeddings)
 |----------|---------|---------|
 | BDT | 3.0 (KBV) | Patient demographics, diagnoses, medications, encounters |
 | LDT | 3.2.19 (KBV) | Lab results from external labs |
-| GDT | SA 6310 | Device results: ECG, spirometry, blood pressure |
-| Doctolib JSON | — | Appointment calendar (via scraper pattern) |
+| GDT | SA 6302 / SA 6310 | Device results (ECG, spirometry, BP); bidirectional PVS bridge |
 
 These are the file formats that every certified German practice management system exchanges. Klinika requires no PVS-specific integration — it reads the standard exports.
 
@@ -125,7 +124,7 @@ These are the file formats that every certified German practice management syste
 
 ## Privacy by Architecture
 
-- **No cloud calls** — Gemma 4 runs locally via Ollama. Embeddings run locally via nomic-embed-text.
+- **No cloud calls** — Gemma 4 runs locally via Ollama.
 - **No telemetry** — nothing is sent anywhere.
 - **No authentication** — designed for single-physician use on a locked workstation.
 - **DSGVO compliance** — patient data stays on the device by construction, not by policy.
@@ -137,25 +136,24 @@ These are the file formats that every certified German practice management syste
 
 ```
 klinika/
-├── agent/          # Ollama function-calling agent loop
-├── tools/          # 20+ tools (patients, labs, devices, drafts, skills, …)
+├── agent/          # Ollama function-calling agent loop + MCP client
+├── tools/          # Clinical tools, admin tools, plugin discovery
 ├── services/       # SQLite service layer (patients, labs, devices, drafts)
 ├── standards/      # BDT, LDT, GDT parsers (KBV-compliant)
+├── bridges/        # GDT bidirectional bridge + LDT folder watcher
 ├── briefings/      # Morning briefing generator
-├── drafting/       # Document templates (5 types)
-├── memory/         # SQLite + nomic-embed-text semantic recall
-├── skills/         # Skill persistence and retrieval
+├── drafting/       # Document templates (referral, SOAP, sick note, …)
 ├── voice/          # faster-whisper offline transcription
-└── web/            # FastAPI server + chat UI (Chat + Tagesbriefing tabs)
+└── web/            # FastAPI server + SSE streaming + chat UI
 
 scripts/
-├── setup_demo.py           # One-command demo setup
-├── generate_sample_bdt.py  # Regenerate synthetic BDT data
-├── generate_sample_ldt.py  # Regenerate synthetic LDT data
-└── generate_sample_doctolib.py
+├── setup_demo.py           # One-command demo setup (seeds DB + briefing)
+└── setup_wizard.py         # Guided Day 1 install (BDT, LDT folder, GDT bridge)
+
+plugins/
+└── ecg_server.py           # Example MCP vendor plugin (fastmcp, stdio)
 
 data/samples/               # Synthetic patient data (safe to share)
-docs/                       # Architecture docs
 tests/                      # 173 tests across all stages
 ```
 
@@ -169,7 +167,6 @@ Copy `.env.example` to `.env` and adjust:
 OLLAMA_HOST=http://localhost:11434
 KLINIKA_DB_PATH=./data/klinika.db
 KLINIKA_CHAT_MODEL=gemma4:e2b      # or gemma4:e4b / gemma4:26b
-KLINIKA_EMBED_MODEL=nomic-embed-text
 KLINIKA_WHISPER_MODEL=base         # tiny / base / small / medium
 
 # MCP plugin servers — comma-separated paths (Mode 2 vendor plugins)
