@@ -56,7 +56,8 @@ cd klinika
 pip install uv
 uv sync
 
-# 3. Seed demo data (synthetic patients, one-time)
+# 3. Seed demo data — no real patient data needed
+# Generates 5 fictional patients with full history, labs, and devices
 python scripts/setup_demo.py
 
 # 4. Start the web UI
