@@ -102,6 +102,28 @@ Gemma 4 via Ollama
   (local, no network)
 ```
 
+**Connection architecture — two integration modes:**
+
+```
+                    ┌─────────────────────────────┐
+                    │         KLINIKA HUB          │
+                    │      (local, Gemma 4)         │
+                    └──────────────┬───────────────┘
+                                   │
+              ┌────────────────────┼────────────────────┐
+              │                    │                    │
+              ▼                    ▼                    ▼
+   MODE 1: File-Watch        MODE 2: MCP           Doctor /
+   Bridges (no cooperation   Plugins (cooperative  MFA /
+   needed)                   systems)              Patient
+              │                    │
+   BDT: patient records      specialist AI providers
+   LDT: lab results          device vendors
+   GDT: device results       scheduling, HL7, FHIR
+   (all KBV-mandated,        (vendor-built,
+    works with any PVS)       self-describing)
+```
+
 **Data flow on installation day:**
 1. Clinic admin exports full BDT from existing PVS (MEDISTAR, TURBOMED, medatixx, etc.)
 2. Klinika ingests the BDT file — patient records, diagnoses, medications, encounters
