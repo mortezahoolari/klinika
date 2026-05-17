@@ -117,8 +117,9 @@ Gemma 4 via Ollama
 | BDT | 3.0 (KBV) | Patient demographics, diagnoses, medications, encounters |
 | LDT | 3.2.19 (KBV) | Lab results from external labs |
 | GDT | SA 6302 / SA 6310 | Device results (ECG, spirometry, BP); bidirectional PVS bridge |
+| MCP plugins | — | Any additional standard: HL7, FHIR, DICOM, proprietary vendor formats |
 
-These are the file formats that every certified German practice management system exchanges. Klinika requires no PVS-specific integration — it reads the standard exports.
+BDT, LDT, and GDT are natively implemented — every certified German PVS exports them. For everything else, specialist vendors ship an MCP server that wraps their native protocol. Klinika speaks MCP; the plugin handles the translation. This makes the hub extensible to any device or data source without changes to the core.
 
 ---
 
