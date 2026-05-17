@@ -1,17 +1,17 @@
 """
-Cardisio ECG Analysis — sample MCP plugin server.
+ECG Analysis — sample MCP plugin server.
 
 This is an example of what a third-party cardiac AI vendor would ship.
 Drop this file in plugins/, set KLINIKA_MCP_SERVERS=plugins/ecg_server.py,
 and Klinika discovers analyze_ecg automatically at startup.
 
-In production this would call a local Cardisio analysis engine.
+In production this would call a local AI analysis engine.
 Here it returns realistic mock output for demonstration purposes.
 """
 
 from fastmcp import FastMCP
 
-mcp = FastMCP("Cardisio ECG Analysis")
+mcp = FastMCP("ECG Analysis")
 
 
 @mcp.tool()

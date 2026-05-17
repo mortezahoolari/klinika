@@ -105,7 +105,7 @@ Gemma 4 via Ollama
 **Data flow on installation day:**
 1. Clinic admin exports full BDT from existing PVS (MEDISTAR, TURBOMED, medatixx, etc.)
 2. Klinika ingests the BDT file — patient records, diagnoses, medications, encounters
-3. Daily: calendar sync from Doctolib (or PVS export) + LDT lab inbox + GDT device folder
+3. Daily: calendar sync from scheduling software (or PVS export) + LDT lab inbox + GDT device folder
 4. Drafts go back to the doctor for copy-paste into the PVS; device results can be written back automatically via GDT SA 6310
 
 ---
