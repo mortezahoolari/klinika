@@ -1,6 +1,6 @@
 # Klinika
 
-**A local-first AI thinking layer for German physicians.**
+**A local-first AI intelligence hub for German physicians.**
 
 Klinika runs Gemma 4 on-premise — no cloud, no SaaS, no patient data leaving the building. It connects to the clinic's existing practice software via BDT/LDT/GDT (the open KBV standards every German PVS exports), and to specialist AI vendors via MCP plugins — turning the doctor's workstation into an intelligence hub where every system talks through one interface.
 
@@ -22,9 +22,8 @@ Cloud-based AI assistants are a non-starter: German healthcare law requires pati
 - **Natural language queries** — "Which patients are on Metformin and have HbA1c above 8?" answered from the real patient database
 - **Document drafting** — referral letters, sick notes, discharge summaries, SOAP notes — in German, using actual patient data from the database
 - **Voice input** — dictate directly; Whisper transcribes offline, no audio leaves the device
-- **Skill learning** — save any workflow as a named skill: "Erstelle DMP-Dokumentation für Diabetes-Patient" becomes a one-click operation
 - **Device data** — imports ECG, spirometry, and blood pressure results directly from GDT files
-- **MCP plugin support** — specialist AI vendors ship an MCP server (e.g. ECG analysis, spirometry AI); Klinika connects at startup and the agent discovers installed plugins on demand with `find_plugin`
+- **MCP plugin support** — specialist AI vendors ship an MCP server (e.g. ECG analysis, spirometry AI); the agent discovers installed plugins on demand via `find_plugin`, keeping vendor schemas out of the context until needed
 
 ---
 
@@ -107,7 +106,7 @@ Gemma 4 via Ollama        ←  nomic-embed-text (embeddings)
 1. Clinic admin exports full BDT from existing PVS (MEDISTAR, TURBOMED, medatixx, etc.)
 2. `bootstrap` tool ingests all patient records, diagnoses, medications, encounters
 3. Daily: calendar sync from Doctolib (or PVS export) + LDT lab inbox + GDT device folder
-4. Drafts go back to the doctor for copy-paste into the PVS — Klinika never writes back
+4. Drafts go back to the doctor for copy-paste into the PVS; device results can be written back automatically via GDT SA 6310
 
 ---
 
