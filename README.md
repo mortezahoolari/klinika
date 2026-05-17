@@ -1,6 +1,6 @@
 # Klinika
 
-**A local-first AI intelligence hub for German physicians.**
+**A local-first AI intelligence hub for physicians.**
 
 Klinika runs Gemma 4 on-premise — no cloud, no SaaS, no patient data leaving the building. It connects to the clinic's existing practice software via BDT/LDT/GDT (the open KBV standards every German PVS exports), and to specialist AI vendors via MCP plugins — turning the doctor's workstation into an intelligence hub where every system talks through one interface.
 
